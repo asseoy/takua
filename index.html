@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>תקוע בסיר · שבט הנשיא</title>
+<meta name="description" content="נתקעת בסיר השקשוקה של המחנה. עם פטיש יתדות בלבד – מטפסים עד הדגל על התורן.">
+<meta property="og:title" content="תקוע בסיר">
+<meta property="og:description" content="נתקעת בסיר השקשוקה של המחנה. עם פטיש יתדות בלבד – מטפסים עד הדגל על התורן.">
+<meta name="theme-color" content="#15100c">
+<link rel="icon" href="logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Karantina:wght@400;700&family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="meter"><div id="hBarWrap"><i id="hBar"></i></div><b id="hNow">0.0</b><small>מטר</small><em>שיא <span id="hBest">0</span></em></div>
+  <div id="hInfo"><span id="hSec">המטבח</span> · <span id="hTime">0:00</span> · <span id="hMode">חניך</span></div>
+  <div id="hBtns"><button id="btnCp" class="hb" type="button">לנקודת השמירה</button><button id="btnPause" class="hb" type="button">עצירה</button></div>
+</div>
+<div id="line"><b id="lineWho"></b><span id="lineText"></span></div>
+<div id="toast"></div>
+
+<div id="menu" class="screen">
+  <div class="wrap">
+    <img src="logo.webp" alt="" class="logo">
+    <div class="over">שבט הנשיא מציג</div>
+    <h1 class="title">תקוע בסיר</h1>
+    <p class="sub">נכנסת לסיר השקשוקה של המחנה ונתקעת. יש לך פטיש יתדות אחד – והדרך היחידה החוצה היא למעלה: דרך המטבח, האוהלים, המחסן והמתקן, עד הדגל על התורן.</p>
+    <div class="modes" role="group" aria-label="מצב"><button data-mode="kid" type="button"><b>חניך</b><small>נקודות שמירה בכל אזור</small></button><button data-mode="pro" type="button"><b>בוגר</b><small>בלי נקודות שמירה. נפלת? נפלת.</small></button></div>
+    <div class="btns">
+      <button id="btnCont" class="btn yellow hidden" type="button">להמשיך</button>
+      <button id="btnStart" class="btn big" type="button">להתחיל לטפס</button>
+      <button id="btnHelp" class="btn" type="button">איך משחקים</button>
+      <button id="btnSound" class="btn" type="button">צליל: פועל</button>
+    </div>
+    <p class="best" id="menuBest"></p>
+  </div>
+</div>
+
+<div id="help" class="screen hidden">
+  <div class="panel">
+    <h2>איך משחקים</h2>
+    <p id="ctlHint"></p>
+    <ul>
+      <li>הפטיש תמיד מנסה להגיע למקום שמכוונים אליו. כשהוא נתקע בקרקע – הסיר זז במקום.</li>
+      <li>לעלות: מניחים את הפטיש על מדף גבוה, ומושכים למטה ואחורה.</li>
+      <li>לקפוץ: מצמידים את הפטיש לקרקע ודוחפים חזק למטה.</li>
+      <li>לתפוס קצה: ראש הפטיש רחב – אפשר לתלות אותו על קצה של מדף ולמשוך.</li>
+      <li>בד אוהלים חלקלק, שקי שינה מתגלגלים, וחבלים הם אחיזה מצוינת.</li>
+      <li>במצב חניך יש נקודת שמירה בתחילת כל אזור (מקש R במחשב). במצב בוגר – אין.</li>
+      <li>ההתקדמות נשמרת לבד. אפשר לסגור ולהמשיך מאותו מקום.</li>
+    </ul>
+    <button id="btnHelpBack" class="btn" type="button">חזרה</button>
+  </div>
+</div>
+
+<div id="pause" class="screen hidden">
+  <div class="wrap">
+    <h1 class="title small">עצירה</h1>
+    <div class="btns">
+      <button id="btnResume" class="btn big" type="button">להמשיך לטפס</button>
+      <button id="btnPHelp" class="btn" type="button">איך משחקים</button>
+      <button id="btnQuit" class="btn" type="button">לתפריט (נשמר)</button>
+    </div>
+  </div>
+</div>
+
+<div id="win" class="screen hidden">
+  <div class="wrap">
+    <img src="logo.webp" alt="" class="logo">
+    <div class="over" id="winMode"></div>
+    <h1 class="title small">בפסגה!</h1>
+    <p class="sub">יצאת מהסיר עד הדגל על התורן. השביעסט חייב שקשוקה לכל השבט.</p>
+    <div class="stats"><span><small>זמן</small><b id="winTime"></b></span><span><small>נפילות</small><b id="winFalls"></b></span><span><small>הזמן הכי טוב</small><b id="winBest"></b></span></div>
+    <div class="btns"><button id="btnAgain" class="btn big" type="button">לטפס שוב</button><button id="btnWinMenu" class="btn" type="button">לתפריט</button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/planck@1.0.6/dist/planck.min.js"></script>
+<script src="js/phys.js"></script>
+<script src="js/level.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
