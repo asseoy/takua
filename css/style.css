@@ -3,6 +3,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:#15100c;color:var(--chalk);font-family:var(--ui);overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none}
 #gl{position:fixed;inset:0;display:block;cursor:crosshair}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:5}
 .hidden{display:none!important}
 .screen{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(to top,rgba(10,8,6,.88),rgba(10,8,6,.25) 80%);overflow:auto}
 .wrap{text-align:center;max-width:680px}

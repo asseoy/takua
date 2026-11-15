@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<canvas id="gl"></canvas>
+<canvas id="gl"></canvas><canvas id="fx"></canvas>
 
 <div id="hud" class="hidden">
   <div id="meter"><div id="hBarWrap"><i id="hBar"></i></div><b id="hNow">0.0</b><small>מטר</small><em>שיא <span id="hBest">0</span></em></div>
@@ -84,6 +84,7 @@
 <script src="https://cdn.jsdelivr.net/npm/planck@1.0.6/dist/planck.min.js"></script>
 <script src="js/phys.js"></script>
 <script src="js/level.js"></script>
-<script src="js/main.js"></script>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+<script type="module" src="js/main3d.js"></script>
 </body>
 </html>
