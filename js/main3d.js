@@ -19,11 +19,13 @@ addEventListener('resize', resize); resize();
 // ---------- world ----------
 const PH = createPhys(planck);
 let S = null, L = null;
-function buildWorld() { S = PH.create(); L = buildLevel(S); }
-buildWorld();
+function buildWorld(mode, first) { S = PH.create(); L = buildLevel(S, { easy: mode !== 'pro' }); if (!first && typeof build3D === 'function') build3D(); }
+buildWorld(store.get('mode', 'kid'), true);
 
 // ---------- state ----------
 const G = { playing: false, mode: store.get('mode', 'kid'), t: 0, best: 0, falls: 0, maxH: 0, peakSinceLand: 0, won: false, cp: 0, startT: 0, elapsed: 0, paused: false };
+const _w2 = new THREE.Vector3();
+const w2s = (x, y) => { _w2.set(x, y, 0).project(camera); return [(_w2.x + 1) / 2 * W, (1 - _w2.y) / 2 * H]; };
 const CAMD = () => touch && W < H ? 15 : 12.5;                                          // camera distance (m)
 const PPM = () => H / (2 * CAMD() * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));   // pixels per metre on the play plane
 const cam = { x: 0, y: 3 };
@@ -67,7 +69,7 @@ function say(who, text, secs = 4) { $('lineWho').textContent = who; $('lineText'
 
 // ---------- checkpoints / saving ----------
 function toCheckpoint() { const c = L.checkpoints[G.cp]; S.place(c.x, c.y); aim.x = 1.2; aim.y = 0.3; G.peakSinceLand = c.y; tone(523, 0.12); tone(784, 0.15, 'triangle', 0.15, 0.08); }
-function saveRun() { if (!G.playing || G.won) return; const p = S.pot.getPosition(); store.set('run', { x: p.x, y: p.y, a: S.pot.getAngle(), mode: G.mode, cp: G.cp, falls: G.falls, elapsed: G.elapsed, maxH: G.maxH }); }
+function saveRun() { if (!G.playing || G.won) return; const p = S.pot.getPosition(); store.set('run', { lv: 2, x: p.x, y: p.y, a: S.pot.getAngle(), mode: G.mode, cp: G.cp, falls: G.falls, elapsed: G.elapsed, maxH: G.maxH }); }
 
 // ---------- 3D scene ----------
 const LOGO = new Image(); LOGO.src = 'logo.webp';
@@ -84,7 +86,7 @@ const sun = new THREE.DirectionalLight(0xfff0dc, 2.6); sun.castShadow = true; su
 scene.fog = new THREE.Fog(0xcfdde8, 40, 220);
 { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; }
 const TX = makeTextures(); let W3 = null; const PL = buildPlayer(scene);
-function build3D() { W3 = buildWorld3D(scene, L, TX, LOGO); }
+function build3D() { if (W3 && W3._objs) W3._objs.forEach(o => scene.remove(o)); const before = new Set(scene.children); W3 = buildWorld3D(scene, L, TX, LOGO); W3._objs = scene.children.filter(o => !before.has(o)); if (LOGO.complete && W3.redrawFlag) W3.redrawFlag(LOGO); }
 build3D();
 LOGO.onload = () => { if (W3 && W3.redrawFlag) W3.redrawFlag(LOGO); };
 const C = h => new THREE.Color(h);
@@ -103,6 +105,49 @@ function render3D(dt) {
   renderer.render(scene, camera);
 }
 // ---------- loop ----------
+// ---------- coach: shows a first-timer exactly where to put the mallet and when to pull ----------
+// Runs in חניך mode for the first 3 climbs, and again whenever you are stuck for 35 s.
+let coachPull = false, coachLeft = store.get('coach', 3), coachOn = false, coachLedge = null, stuckT = 0, lastMax = 0, coachMsg = '';
+const PULL = touch ? 'עכשיו גרור את האצבע למטה, אל הסיר' : 'עכשיו משוך את העכבר למטה, אל הסיר';
+const PUT = touch ? 'גרור את האצבע כדי לשים את הפטיש על העיגול' : 'הזז את העכבר כדי לשים את הפטיש על העיגול';
+function coachPick(p) { let best = null, bd = 1e9; for (const Lg of L.ledges) { if (Lg.y < p.y - 0.05 || Lg.y > p.y + 2.6 || Math.abs(Lg.x - p.x) < Lg.w / 2 - 0.2) continue; const d = Math.max(0, Math.abs(Lg.x - p.x) - Lg.w / 2) + (Lg.y - p.y) * 0.3; if (d < bd && d < 3.2) { bd = d; best = Lg; } } return best; }
+function coachTick(dt) {
+  const p = S.pot.getPosition();
+  if (G.maxH > lastMax + 0.4) { lastMax = G.maxH; stuckT = 0; } else stuckT += dt;
+  const want = G.mode === 'kid' && (coachLeft > 0 || stuckT > 35);
+  if (!want) { if (coachOn) { coachOn = false; $('coach').classList.remove('on'); } return; }
+  if (!coachLedge || p.y > coachLedge.y + 0.3 || coachLedge.y > p.y + 3.2) {
+    if (coachLedge && p.y > coachLedge.y + 0.3 && Math.abs(p.x - coachLedge.x) < coachLedge.w / 2 + 0.3) {   // climbed it
+      tone(784, 0.1); tone(1046, 0.16, 'triangle', 0.15, 0.08); stuckT = 0;
+      if (coachLeft > 0) { coachLeft--; store.set('coach', coachLeft); if (coachLeft === 0) say('מדריך', 'בדיוק ככה! לשים, לתפוס, למשוך. מכאן אתה לבד.', 4.5); else toast('יפה! עוד פעם'); }
+    }
+    coachLedge = coachPick(p);
+  }
+  coachOn = !!coachLedge;
+  const hp = S.head.getPosition(), cpt = coachLedge && coachPoint(p), onIt = cpt && Math.hypot(hp.x - cpt.x, hp.y - cpt.y) < 0.75;
+  coachPull = !!onIt;
+  const msg = !coachLedge ? '' : onIt ? PULL : PUT;
+  if (msg !== coachMsg) { coachMsg = msg; $('coachText').textContent = msg; }
+  $('coach').classList.toggle('on', coachOn);
+}
+function coachPoint(p) { const Lg = coachLedge, side = p.x < Lg.x ? -1 : 1, edge = Lg.x + side * Lg.w / 2; return { x: edge - side * 0.5, y: Lg.y }; }
+function coachDraw() {
+  if (!coachOn || !G.playing || G.paused) return;
+  const p = S.pot.getPosition(), pv = S.pivot(), h = S.head.getPosition(), pulse = 0.5 + 0.5 * Math.sin(G.t * 6);
+  ctx.save(); ctx.lineCap = 'round';
+  if (!coachPull) {
+    const c = coachPoint(p), [cx, cy] = w2s(c.x, c.y), [hx, hy] = w2s(h.x, h.y), r = PPM() * (0.32 + pulse * 0.08);
+    ctx.setLineDash([6, 8]); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(cx, cy); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,210,63,.25)'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+  } else {
+    const [hx, hy] = w2s(h.x, h.y), [px, py] = w2s(p.x, p.y), dx = px - hx, dy = py - hy, l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l;
+    const a = 26 + pulse * 18, sx = hx + ux * 30, sy = hy + uy * 30, ex = sx + ux * (60 + a), ey = sy + uy * (60 + a);
+    ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(ex + ux * 18, ey + uy * 18); ctx.lineTo(ex - uy * 16, ey + ux * 16); ctx.lineTo(ex + uy * 16, ey - ux * 16); ctx.fill();
+  }
+  ctx.restore();
+}
 let acc = 0, lastT = performance.now(), landT = 0, onGround = false;
 function frame(now) {
   requestAnimationFrame(frame);
@@ -112,6 +157,7 @@ function frame(now) {
     // aim from the mouse (desktop)
     if (!touch && mouse) { const pv = S.pivot(), w = screenToPlane(mouse.x, mouse.y); if (w) { aim.x = w.x - pv.x; aim.y = w.y - pv.y; } }
     S.setAim(aim.x, aim.y);
+    coachTick(dt);
     acc += dt; let n = 0; while (acc >= 1 / 120 && n < 8) { S.step(1 / 120); acc -= 1 / 120; n++; }
     // impacts → sound
     if (S.impacts.length) { const big = S.impacts.reduce((a, b) => b.n > a.n ? b : a); knock(big.who === 'pot' ? 'pot' : big.mat, big.n); S.impacts.length = 0; }
@@ -140,6 +186,7 @@ function frame(now) {
   // draw
   render3D(dt);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, W, H); if (fwT > 0 || sparks.length) fireworks(dt);
+  coachDraw();
 }
 const fmtT = s => { s = Math.floor(s); const h = Math.floor(s / 3600), mm = Math.floor(s / 60) % 60, ss = s % 60; return (h ? h + ':' + String(mm).padStart(2, '0') : mm) + ':' + String(ss).padStart(2, '0'); };
 let toastT = 0; function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200); }
@@ -169,10 +216,12 @@ function refreshMenu() {
 }
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { G.mode = b.dataset.mode; store.set('mode', G.mode); refreshMenu(); tone(880, 0.05); });
 function start(cont) {
-  audioInit(); buildWorld(); G.won = false; G.paused = false; sparks = []; fwT = 0;
-  const run = cont ? store.get('run', null) : null;
+  const run0 = cont ? store.get('run', null) : null; if (run0 && run0.mode) G.mode = run0.mode;
+  audioInit(); buildWorld(G.mode); G.won = false; G.paused = false; sparks = []; fwT = 0;
+  const run = run0 && (run0.mode === 'pro' || run0.lv === 2) ? run0 : null;   // old חניך saves were on the old, higher steps
   if (run) { G.mode = run.mode || G.mode; S.place(run.x, run.y + 0.05); G.cp = run.cp || 0; G.falls = run.falls || 0; G.elapsed = run.elapsed || 0; G.maxH = run.maxH || run.y; }
   else { S.place(L.startX, 0.45); G.cp = 0; G.falls = 0; G.elapsed = 0; G.maxH = 0; store.set('run', null); }
+  coachLedge = null; stuckT = 0; lastMax = G.maxH; coachMsg = '';
   G.best = store.get('best', 0); G.peakSinceLand = S.pot.getPosition().y; G.playing = true; aim.x = 1.2; aim.y = 0.3;
   $('btnCp').classList.toggle('hidden', G.mode !== 'kid'); $('hMode').textContent = G.mode === 'kid' ? 'חניך' : 'בוגר';
   show(null);
@@ -187,7 +236,7 @@ $('btnAgain').onclick = () => start(false); $('btnWinMenu').onclick = () => { G.
 $('btnSound').onclick = () => { soundOn = !soundOn; store.set('sound', soundOn); if (master) master.gain.value = soundOn ? 0.7 : 0; $('btnSound').textContent = soundOn ? 'צליל: פועל' : 'צליל: כבוי'; };
 $('btnSound').textContent = soundOn ? 'צליל: פועל' : 'צליל: כבוי';
 addEventListener('pagehide', saveRun); document.addEventListener('visibilitychange', () => { if (document.hidden) saveRun(); });
-$('ctlHint').textContent = touch ? 'גוררים את האצבע על המסך – הפטיש זז איתה. דוחפים את הקרקע כדי לעלות, ותופסים קצוות עם ראש הפטיש.' : 'מזיזים את העכבר – הפטיש הולך אחריו. דוחפים את הקרקע כדי לעלות, ותופסים קצוות עם ראש הפטיש.';
+$('ctlHint').textContent = touch ? 'גוררים את האצבע על המסך – הפטיש זז איתה.' : 'מזיזים את העכבר – הפטיש הולך אחריו.';
 refreshMenu(); show('menu'); requestAnimationFrame(frame);
 window.__T = { G, get S() { return S; }, get L() { return L; }, aim, start, win };
 })();

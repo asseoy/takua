@@ -1,7 +1,9 @@
 // The climb: one tall pile of camp stuff, built as a zig-zag of ledges that get harder as you go up.
 // Sections: המטבח → האוהלים → המחסן → המתקן → ביג בן → התורן. Each piece is solid (bright, outlined);
 // the dim structure behind it is decoration only. Returns the list of pieces for drawing.
-(function (root, factory) { if (typeof module !== 'undefined') module.exports = factory; else root.buildLevel = factory; })(this, function buildLevel(S) {
+(function (root, factory) { if (typeof module !== 'undefined') module.exports = factory; else root.buildLevel = factory; })(this, function buildLevel(S, opt = {}) {
+  // חניך mode (opt.easy): lower steps that sit beside each other like stairs, never overhanging the one below.
+  const EZ = !!opt.easy;
   const items = [], deco = [], checkpoints = [];
   const R = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(1986);
   const SECTIONS = [
@@ -28,12 +30,12 @@
   while (y < 107) {
     const sec = secAt(y);
     const hard = (y / 107);                     // 0 → 1 going up
-    const easy = y < 9 ? 0.78 : 1;                 // the first kitchen steps are gentle
+    const easy = (y < 9 ? 0.78 : 1) * (EZ ? 0.65 : 1);   // the first kitchen steps are gentle
     const h = (steps[i % steps.length] + hard * 0.35 * (i % 3 === 0 ? 1 : 0)) * easy;
     const w = Math.max(1.4, 3.6 - hard * 1.8 + (R() - 0.5) * 0.6) + (y < 9 ? 0.6 : 0);
     y += h; i++;
-    let nx = x + dir * (prevW / 2 + w / 2 - 0.4 + hard * 0.9 + R() * 0.4);
-    if (nx > 11.5 - w / 2 || nx < -11.5 + w / 2 || ++run > 3 + Math.floor(R() * 2)) { dir *= -1; run = 0; nx = x + dir * (prevW / 2 + w / 2 - 0.6 + hard * 0.7); }
+    let nx = EZ ? x + dir * (prevW / 2 + w / 2 - 0.05 + hard * 0.35 + R() * 0.15) : x + dir * (prevW / 2 + w / 2 - 0.4 + hard * 0.9 + R() * 0.4);
+    if (nx > 11.5 - w / 2 || nx < -11.5 + w / 2 || ++run > 3 + Math.floor(R() * 2)) { dir *= -1; run = 0; nx = x + dir * (prevW / 2 + w / 2 + (EZ ? -0.05 + hard * 0.35 : -0.6 + hard * 0.7)); }
     nx = Math.max(-11.5 + w / 2, Math.min(11.5 - w / 2, nx));
     ledges.push({ x: nx, y, w, sec: sec.id }); x = nx; prevW = w;
   }
@@ -84,6 +86,6 @@
   box('summit', fx, topY, 1.7, 0.16);
   const flag = { x: fx + 0.6, y: topY + 0.16, top: topY + 4 };
   // dim background structure for the facility/bigben feel all the way up
-  const f0 = ledges[0], startX = f0.x - f0.w / 2 - 1.1; checkpoints[0].x = startX;
+  const f0 = ledges[0], away = EZ && ledges[1] && ledges[1].x < f0.x ? 1 : -1, startX = f0.x + away * (f0.w / 2 + 1.1);   // start on the open side, not under the next shelf checkpoints[0].x = startX;
   return { items, deco, checkpoints, SECTIONS, secAt, flag, ledges, summitY: topY, startX };
 });

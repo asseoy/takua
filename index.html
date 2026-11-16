@@ -24,6 +24,7 @@
 </div>
 <div id="line"><b id="lineWho"></b><span id="lineText"></span></div>
 <div id="toast"></div>
+<div id="coach"><b>איך עולים</b><span id="coachText"></span></div>
 
 <div id="menu" class="screen">
   <div class="wrap">
@@ -31,7 +32,7 @@
     <div class="over">שבט הנשיא מציג</div>
     <h1 class="title">תקוע בסיר</h1>
     <p class="sub">נכנסת לסיר השקשוקה של המחנה ונתקעת. יש לך פטיש יתדות אחד – והדרך היחידה החוצה היא למעלה: דרך המטבח, האוהלים, המחסן והמתקן, עד הדגל על התורן.</p>
-    <div class="modes" role="group" aria-label="מצב"><button data-mode="kid" type="button"><b>חניך</b><small>נקודות שמירה בכל אזור</small></button><button data-mode="pro" type="button"><b>בוגר</b><small>בלי נקודות שמירה. נפלת? נפלת.</small></button></div>
+    <div class="modes" role="group" aria-label="מצב"><button data-mode="kid" type="button"><b>חניך</b><small>מדרגות נמוכות, עזרה בהתחלה ונקודות שמירה</small></button><button data-mode="pro" type="button"><b>בוגר</b><small>בלי נקודות שמירה. נפלת? נפלת.</small></button></div>
     <div class="btns">
       <button id="btnCont" class="btn yellow hidden" type="button">להמשיך</button>
       <button id="btnStart" class="btn big" type="button">להתחיל לטפס</button>
@@ -47,12 +48,13 @@
     <h2>איך משחקים</h2>
     <p id="ctlHint"></p>
     <ul>
+      <li><b>הכי חשוב – ככה עולים:</b> שמים את ראש הפטיש <b>על</b> המדף שמעליך (על הגג שלו, לא על הקיר), ואז מושכים למטה, אל הסיר. הפטיש נשען על המדף והסיר עולה אליו.</li>
+      <li>במצב חניך המדרגות נמוכות יותר, ובטיפוסים הראשונים עיגול צהוב מראה איפה לשים את הפטיש וחץ מראה לאן למשוך. אם נתקעים הרבה זמן – העיגול חוזר.</li>
       <li>הפטיש תמיד מנסה להגיע למקום שמכוונים אליו. כשהוא נתקע בקרקע – הסיר זז במקום.</li>
-      <li>לעלות: מניחים את הפטיש על מדף גבוה, ומושכים למטה ואחורה.</li>
       <li>לקפוץ: מצמידים את הפטיש לקרקע ודוחפים חזק למטה.</li>
       <li>לתפוס קצה: ראש הפטיש רחב – אפשר לתלות אותו על קצה של מדף ולמשוך.</li>
       <li>בד אוהלים חלקלק, שקי שינה מתגלגלים, וחבלים הם אחיזה מצוינת.</li>
-      <li>במצב חניך יש נקודת שמירה בתחילת כל אזור (מקש R במחשב). במצב בוגר – אין.</li>
+      <li>במצב בוגר המדרגות גבוהות ואין עזרה. במצב חניך יש נקודת שמירה בתחילת כל אזור (מקש R במחשב). במצב בוגר – אין.</li>
       <li>ההתקדמות נשמרת לבד. אפשר לסגור ולהמשיך מאותו מקום.</li>
     </ul>
     <button id="btnHelpBack" class="btn" type="button">חזרה</button>
